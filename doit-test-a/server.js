@@ -6,26 +6,11 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.urlencoded({ extended: true }));
-// POST /todo/1?_method=PUT → PUT /todo/1 로 처리
+app.use(express.json()); // 프론트엔드 fetch 요청(JSON)을 받기 위해 필요합니다.
+// POST /todos/1?_method=PUT → PUT /todos/1 로 처리
 app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public')));
-// PUT /todo/:id - 할 일 수정 처리
-app.put('/todo/:id', (req, res) => {
-  const id = Number(req.params.id);
-  const newText = (req.body.text || '').trim();
 
-  const todo = todos.find(t => t.id === id);
-  if (todo && newText) {
-    todo.text = newText;
-  }
-  res.redirect('/');
-});
-// DELETE /todo/:id - 할 일 삭제 처리
-app.delete('/todo/:id', (req, res) => {
-  const id = Number(req.params.id);
-  todos = todos.filter(t => t.id !== id);
-  res.redirect('/');
-});
 // 메모리 저장 (서버 재시작 시 초기화)
 let todos = [
   { id: 1, text: '아침 운동하기' },
@@ -34,17 +19,54 @@ let todos = [
 ];
 let nextId = 4;
 
-app.get('/todo', (req, res) => {
+// 1. 목록 조회 (참고 사이트가 요청하는 경로: /todos)
+app.get('/todos', (req, res) => {
   res.json(todos);
 });
 
-app.post('/todo', (req, res) => {
+// 2. 항목 추가 (경로: /todos)
+app.post('/todos', (req, res) => {
   const text = (req.body.text || '').trim();
-  if (text) todos.push({ id: nextId++, text });
-  res.redirect('/');
+  if (text) {
+    todos.push({ id: nextId++, text });
+  }
+  // 프론트엔드가 JSON을 기대하는지 리다이렉트를 기대하는지에 따라 응답 처리
+  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+    res.json(todos);
+  } else {
+    res.redirect('/');
+  }
 });
 
+// 3. 수정 처리 (경로: /todos/:id)[cite: 1, 2]
+app.put('/todos/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const newText = (req.body.text || '').trim();
 
-app.listen(3413, () => {
-  console.log(`http://localhost:${3413}`);
+  const todo = todos.find(t => t.id === id);
+  if (todo && newText) {
+    todo.text = newText;
+  }
+  
+  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+    res.json(todos);
+  } else {
+    res.redirect('/');
+  }
+});
+
+// 4. 삭제 처리 (경로: /todos/:id)[cite: 1, 2]
+app.delete('/todos/:id', (req, res) => {
+  const id = Number(req.params.id);
+  todos = todos.filter(t => t.id !== id);
+
+  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+    res.json(todos);
+  } else {
+    res.redirect('/');
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`http://localhost:${PORT}`);
 });
