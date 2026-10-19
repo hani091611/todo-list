@@ -6,8 +6,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json()); // 프론트엔드 fetch 요청(JSON)을 받기 위해 필요합니다.
-// POST /todos/1?_method=PUT → PUT /todos/1 로 처리
+app.use(express.json());
+// POST /todo/1?_method=PUT → PUT /todo/1 로 처리
 app.use(methodOverride('_method'));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -19,27 +19,28 @@ let todos = [
 ];
 let nextId = 4;
 
-// 1. 목록 조회 (참고 사이트가 요청하는 경로: /todos)
-app.get('/todos', (req, res) => {
+// 1. 목록 조회 (GET /todo)
+app.get('/todo', (req, res) => {
   res.json(todos);
 });
 
-// 2. 항목 추가 (경로: /todos)
-app.post('/todos', (req, res) => {
+// 2. 할 일 추가 (POST /todo)
+app.post('/todo', (req, res) => {
   const text = (req.body.text || '').trim();
   if (text) {
     todos.push({ id: nextId++, text });
   }
-  // 프론트엔드가 JSON을 기대하는지 리다이렉트를 기대하는지에 따라 응답 처리
-  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+  
+  // 프론트엔드 비동기 요청 또는 일반 폼 제출 대응
+  if (req.xhr || req.headers.accept?.includes('json')) {
     res.json(todos);
   } else {
     res.redirect('/');
   }
 });
 
-// 3. 수정 처리 (경로: /todos/:id)[cite: 1, 2]
-app.put('/todos/:id', (req, res) => {
+// 3. 할 일 수정 (PUT /todo/:id)
+app.put('/todo/:id', (req, res) => {
   const id = Number(req.params.id);
   const newText = (req.body.text || '').trim();
 
@@ -47,20 +48,20 @@ app.put('/todos/:id', (req, res) => {
   if (todo && newText) {
     todo.text = newText;
   }
-  
-  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+
+  if (req.xhr || req.headers.accept?.includes('json')) {
     res.json(todos);
   } else {
     res.redirect('/');
   }
 });
 
-// 4. 삭제 처리 (경로: /todos/:id)[cite: 1, 2]
-app.delete('/todos/:id', (req, res) => {
+// 4. 할 일 삭제 (DELETE /todo/:id)
+app.delete('/todo/:id', (req, res) => {
   const id = Number(req.params.id);
   todos = todos.filter(t => t.id !== id);
 
-  if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+  if (req.xhr || req.headers.accept?.includes('json')) {
     res.json(todos);
   } else {
     res.redirect('/');
